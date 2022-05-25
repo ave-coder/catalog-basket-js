@@ -1,15 +1,15 @@
 const API = 'https://raw.githubusercontent.com/GeekBrainsTutorial/online-store-api/master/responses';
 
 
-
 class ProductList {
     constructor(container = '.products') {
         this.container = container;
         this.goods = [];  //массив товаров из JSON документа
+        this.sum = [];
         this._fetchProducts()
             .then(data => {  // data - каждый объект JSON
-                this.goods = [...data];  // распаковываем JSON документ
-                this.render()
+                this.goods = [...data];
+                this.insertIntoCatalog()
             });
     }
 
@@ -19,6 +19,7 @@ class ProductList {
             .catch(error => {
                 console.log(error);
             })
+
     }
 
     /*
@@ -35,14 +36,6 @@ class ProductList {
 
     */
 
-    render() {
-        const block = document.querySelector(this.container);
-        for (let product of this.goods) {
-            const item = new ProductItem(product);
-            block.insertAdjacentHTML("beforeend", item.render());
-            // block.innerHTML += item.render(); - альтернативный метод наполнения блока,но менее эффективный
-        }
-    }
 
     getSum() {
         let sum = 0;
@@ -50,7 +43,18 @@ class ProductList {
             sum += item.price;
         })
     }
+
+    insertIntoCatalog() {
+        const block = document.querySelector(this.container);
+        for (let product of this.goods) {
+            const item = new ProductItem(product);
+            this.sum.push(item);
+            block.insertAdjacentHTML("beforeend", item.renderCatalog());
+            // block.innerHTML += item.render(); - альтернативный метод наполнения блока,но менее эффективный
+        }
+    }
 }
+
 
 class ProductItem {
     constructor(item, img = 'https://via.placeholder.com/200x150') {
@@ -60,11 +64,11 @@ class ProductItem {
         this.img = img;
     }
 
-    render() {
+    renderCatalog() {
         return `<div class="product-item">
                 <img src="${this.img}">
                 <h3>${this.title}</h3>
-                <p>${this.price}</p>
+                <p>${this.price}&#65284;</p>
                 <button class="buy-btn">Купить</button>
             </div>`
     }
@@ -73,23 +77,61 @@ class ProductItem {
 let list = new ProductList();
 
 class Basket {
+    constructor(container = '.cart-block') {
+        this.container = container;
+        this.goods = [];
 
-    addGoods() {
+        this.clickBasket();
+        this.getBasketProduct()
+            .then(data => {
+                this.goods = [...data.contents];
+                this.insertBlock();
+            })
+    }
+
+    clickBasket() {
+        document.querySelector('.btn-cart').addEventListener('click', () => {
+            document.querySelector(this.container).classList.toggle('invisible');
+        })
+    }
+
+    getBasketProduct() {
+        return fetch(`${API}/getBasket.json`)
+            .then(result => result.json())
+            .catch(error => {
+                console.log(error);
+            })
 
     }
 
-    removeGoods() {
-
-    }
-
-    render() {
+    insertBlock() {
+        const block = document.querySelector(this.container);
+        for (let product of this.goods) {
+            const productObj = new OneElemBasket();
+            block.insertAdjacentHTML('beforeend', productObj.renderElem(product));
+        }
 
     }
 }
 
 class OneElemBasket {
 
-    render() {
-
+    renderElem(product) {
+        return `<div class="cart-item" data-id="${product.id_product}">
+                    <div class="product-bio">
+                <img src="${product.img}" alt="image">
+                    <div class="product-desc">
+                <p class="product-title">${product.product_name}</p>
+                <p class="product-count">Количество: ${product.quantity}</p>
+                <p class="product-single-price">$${product.price} each</p>
+                    </div>
+                </div>
+                <div class="right-block">
+                    <p class="product-price">$${product.quantity * product.price}</p>
+                    <button class="del-btn" data-id="${product.id_product}">&#10006;</button> 
+                </div>
+                </div>`
     }
 }
+
+let basket = new Basket();
